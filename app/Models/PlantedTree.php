@@ -21,6 +21,7 @@ class PlantedTree extends Model
         'planter',
         'tree name',
         'photo',
+        'no_of_trees'
     ];
 
     /**

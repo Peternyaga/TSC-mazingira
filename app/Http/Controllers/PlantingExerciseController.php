@@ -151,13 +151,15 @@ class PlantingExerciseController extends Controller
         $treeName = $request['tree_name'];
         $time = $request['time'];
         $photo = $request['photo'];
+        $noOfTrees = $request['no_of_trees'];
 
         try {
             $record = PlantedTree::create([
                 'exercise_id' => $exercise,
                 'planter' => $planter,
                 'tree name' => $treeName,
-                'photo' => $photo
+                'photo' => $photo,
+                'no_of_trees' =>$noOfTrees
             ]);
 
             if ($record){

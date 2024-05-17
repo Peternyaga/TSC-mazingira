@@ -6,8 +6,8 @@ use Illuminate\Support\Facades\Route;
 //use App\Http\Controllers\UserController;
 
 use App\Http\Controllers\UserController;
-
-Route::get('/users', [UserController::class, 'index']);
+Route::group(['middleware' => 'auth.basic'], function () {
+//Route::get('/users', [UserController::class, 'index']);
 Route::get('/update', [UserController::class, 'updateUsers']);
 Route::get('/regional_performance', [UserController::class, 'calculateRegionalPerformance']);
 Route::post('/activate', [UserController::class, 'store']);
@@ -27,6 +27,8 @@ Route::get('/count',[UserController::class, 'countTreesOfParticipants']);
 Route::get('/updateDashboard',[UserController::class, 'updateDashboard']);
 Route::get('/sec_performance',[UserController::class, 'calculateSecretariatPerformance']);
 Route::get('/teachers_per_county',[UserController::class, 'calculateTeacherPerformancePerCounty']);
+});
+
 //Route::get('/users', 'UserController@index');
 /*
 |--------------------------------------------------------------------------

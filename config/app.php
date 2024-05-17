@@ -212,4 +212,10 @@ return [
         // 'ExampleClass' => App\Example\ExampleClass::class,
     ])->toArray(),
 
+
+    /*
+    *Key for authenticating API requests*/
+
+    'api_key'=>"REMOVED_ROTATE_CREDENTIAL"
+
 ];

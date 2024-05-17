@@ -15,8 +15,18 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
+
 class UserController extends Controller
 {
+    protected $startDate;
+    protected $endDate;
+
+    public function __construct()
+    {
+        // Initialize $startDate and $endDate in the constructor
+        $this->startDate = "2023-04-05 00:00:00";
+        $this->endDate = date('Y-m-d H:i:s');
+    }
     /**
      * Display a listing of the resource.
      *
@@ -50,13 +60,6 @@ class UserController extends Controller
                 $array = str_split($inst);
                 $countyCode = count($array) > 7 ? (int)($array[5] . $array[6]) : 0;
             }
-//            $regionSummary = PlantedTree::selectRaw('regions_id, regions_name, COUNT(`planter`) AS count')
-//                ->leftJoin('tbl_counties', function ($join) use ($countyCode) {
-//                $join->on('tbl_counties.county_code', '=', $countyCode);
-//                })->leftJoin('tbl_regions', function ($join) {
-//                    $join->on('tbl_counties.regions_id', '=', 'tbl_regions.id');
-//                })->groupBy('regions_id')->get();
-//            echo  $regionSummary. "\n";
             $region = Counties::select('regions_name', 'regions_id')
                 ->leftJoin('tbl_regions', function ($join) use ($countyCode) {
                     $join->on('tbl_counties.regions_id', '=', 'tbl_regions.id');
@@ -108,7 +111,7 @@ class UserController extends Controller
             try {
             $user = User::create([
                 'tsc_no' => $tsc_no,
-                'phone' => $phone?: $phone_no,
+                'phone' => $phone?:$phone_no,
                 'name' => $name,
                 'email' => $email?:null,
                 'otp' => $otp,
@@ -123,11 +126,22 @@ class UserController extends Controller
                 return json_encode($response);
             }
             if ($user) {
-                $url = "http://192.168.100.226/integrate/s-p/temp-sms?api_key=REMOVED_ROTATE_CREDENTIAL&mobile=$phoneTest&message=$otp";
-                $ch = curl_init($url);
+                $api_key = 'REMOVED_ROTATE_CREDENTIAL';
+                $mobile = $phone;
+                $message = 'Your OTP for TSC Miti account activation is: '.$otp;
+
+                $url = 'http://192.168.100.226/integrate/s-p/temp-sms?' . http_build_query([
+                        'api_key' => $api_key,
+                        'mobile' => $mobile,
+                        'message' => $message,
+                    ]);
+
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_exec($ch);
-                curl_close($ch);
+
+                 curl_exec($ch);
+                 curl_close($ch);
                 $response["code"] = 0;
                 $response['record'] = $user;
                 return json_encode($response);
@@ -184,28 +198,30 @@ class UserController extends Controller
     public function getTeacherInfo($tsc_no)
     {
         $id = (int)$tsc_no;
-        $url = "https://tsconline.tsc.go.ke/api/teacher-register/teacher-register-details-to-edms?api_key=REMOVED_ROTATE_CREDENTIAL&Id_Number=$id";
+       // $url = "https://tsconline.tsc.go.ke/api/teacher-register/teacher-register-details-to-edms?api_key=REMOVED_ROTATE_CREDENTIAL&Id_Number=$id";
         $context = stream_context_create([
             'ssl' => [
                 'verify_peer' => false,
                 'verify_peer_name' => false,
             ],
         ]);
-        $response = file_get_contents($url, true, $context);
-        $response = json_decode($response,true);
-        if (!$response[0]) {
+       // $response = file_get_contents($url, true, $context);
+       // $response = json_decode($response,true);
+        //if (!$response[0]) {
             $url = "https://tpay.tsc.go.ke/tp/v1/api/payroll/?api_key=REMOVED_ROTATE_CREDENTIAL&tsc_no=$tsc_no";
             $response = json_decode(file_get_contents($url, true, $context), true);
             if($response){
-                $response[0]['mobile'] = null;
-                $response[0]['email'] = null;
+                $url = "https://tpay.tsc.go.ke/tp/v1/api/user-contact/?api_key=REMOVED_ROTATE_CREDENTIAL&tsc_no=".$tsc_no;
+                $contacts =json_decode(file_get_contents($url, true, $context), true);
+                $response[0]['mobile'] = $contacts["phone_number"];
+                $response[0]['email'] = $contacts["email"];
             }
 
-        }else{
-            $response[0]['names'] = $response[0]['surname'] . " " . $response[0]['first_name'] . " " . $response[0]['last_name'];
-            $response[0]['station_code'] = $response[0]['institution_code'];
-
-        }
+//        }else{
+//            $response[0]['names'] = $response[0]['surname'] . " " . $response[0]['first_name'] . " " . $response[0]['last_name'];
+//            $response[0]['station_code'] = $response[0]['institution_code'];
+//
+//        }
 
         if ($response === false) {
             return false;
@@ -245,7 +261,7 @@ class UserController extends Controller
 
     public function setPassword(Request $request)
     {
-        $password = md5($request['password']);
+        $password = $request['password'];
         $tscNo = $request['tsc_no'];
         $result = User::where('tsc_no', $tscNo)->update([
             'password' => $password,
@@ -260,17 +276,17 @@ class UserController extends Controller
     public function login(Request $request): JsonResponse
     {
         if (isset($request['tsc_no']) && isset($request['password'])) {
-            $pass = md5($request['password']);
+            $pass = $request['password'];
             $tscNo = $request['tsc_no'];
             $result = User::select('tsc_no', 'password', 'name')->where('tsc_no', $tscNo)->where('password', $pass)->get();
             if ($result->count() > 0) {
-                $totalTrees = $this->countAllTrees();
-                $myTrees = $this->countMyTrees($tscNo);
+//                $totalTrees = $this->countAllTrees();
+//                $myTrees = $this->countMyTrees($tscNo);
                 $result['code'] = 0;
-                $result['total trees'] = $totalTrees;
-                $result['my trees'] = $myTrees;
-                $result['leaderboard'] = $this->countTreesOfParticipants();
-                $result['regional performance'] = $this->calculateRegionalPerformance();
+//                $result['total trees'] = $totalTrees;
+//                $result['my trees'] = $myTrees;
+//                $result['leaderboard'] = $this->countTreesOfParticipants();
+//                $result['regional performance'] = $this->calculateRegionalPerformance();
                 return response()->json($result);
             } else {
                 $response = array('code' => 102);
@@ -287,6 +303,9 @@ class UserController extends Controller
 
     public function updateDashboard(Request $request): JsonResponse
     {
+        //echo $request['query'];
+        //$this->startDate = $request['start_date'];
+        //$this->endDate = $request['end_date'];
         $totalTrees = $this->countAllTrees();
         $myTrees = $this->countMyTrees($request['query']);
         $leaderboard = $this->countTreesOfParticipants();
@@ -302,7 +321,7 @@ class UserController extends Controller
 
     public function countAllTrees()
     {
-        $result = PlantedTree::count();
+        $result = (int)PlantedTree::whereBetween('planted_trees.created_at', [$this->startDate, $this->endDate])->sum('no_of_trees');
         return $result;
     }
 
@@ -311,7 +330,7 @@ class UserController extends Controller
 
     public function countMyTrees($tscNo)
     {
-        $result = PlantedTree::where('planter', $tscNo)->count();
+        $result = (int)PlantedTree::where('planter', $tscNo)->whereBetween('planted_trees.created_at', [$this->startDate, $this->endDate])->sum('no_of_trees');
         return $result;
     }
 
@@ -322,27 +341,11 @@ class UserController extends Controller
     public function fetchParticipatedExercises(Request $request)
     {
         $tscNo = $request['query'];
-        $finalResult = array();
-        $exerciseId = PlantedTree::select('exercise_id')->where('planter', $tscNo)->distinct()->get();
-        if (count($exerciseId)) {
-            $exercises = array();
-            $totalTrees = PlantedTree::where('planter', $tscNo)->count();
-            //$exercises["total"] = $totalTrees;
-            for ($i = 0; $i < count($exerciseId); $i++) {
-                $id = $exerciseId[$i]['exercise_id'];
-                $count = PlantedTree::where('planter', $tscNo)->where('exercise_id', $id)->count();
-                $result = PlantingExercise::select('id', 'exercise name')->where('id', $id)->get();
-                $exercise = $result[0];
-                $exercise["count"] = $count;
-                $exercises[$i] = $exercise;
-            }
-            $finalResult["total_trees"] = $totalTrees;
-            $finalResult["exercises"] = $exercises;
-
-            return $finalResult;
-        } else {
-            return 0;
-        }
+        return PlantedTree::selectRaw("COALESCE(`exercise name`, 'other') AS 'exercise name', cast(COALESCE(sum(no_of_trees), 0) as unsigned) AS count")
+        ->leftJoin('planting_exercises', function($join){
+            $join->on('planted_trees.exercise_id', '=', 'planting_exercises.id');
+        })
+        ->where('planter', $tscNo)->groupBy('exercise_id', 'exercise name')->distinct()->get();
     }
 
     /*
@@ -350,9 +353,15 @@ class UserController extends Controller
 
     public function countTreesOfParticipants()
     {
-        $response = PlantedTree::selectRaw('name, COUNT(`planter`) AS count')->leftJoin('users', function ($join) {
-            $join->on('planter', '=', 'tsc_no');
-        })->groupBy('name', 'planter')->orderBy('count', 'desc')->limit(50)->get();
+        $response = PlantedTree::selectRaw('name, cast(COALESCE(sum(no_of_trees), 0) as unsigned) AS count')
+    ->leftJoin('users', function ($join) {
+        $join->on('planter', '=', 'tsc_no');
+    })
+    ->whereBetween('planted_trees.created_at', [$this->startDate, $this->endDate])
+    ->groupBy('name', 'planter')
+    ->orderByDesc('count') // Use orderByDesc for descending order
+    ->limit(50)
+    ->get();
         return $response;
     }
 
@@ -362,7 +371,7 @@ class UserController extends Controller
 
     public function calculateRegionalPerformance()
     {
-        $result = regions::selectRaw('tbl_regions.id, tbl_regions.regions_name, COUNT(*) AS count')
+        $result = regions::selectRaw('tbl_regions.id, tbl_regions.regions_name, cast(COALESCE(sum(CASE WHEN planted_trees.created_at BETWEEN ? AND ? THEN planted_trees.no_of_trees ELSE 0 END), 0) as unsigned) AS count',[$this->startDate, $this->endDate])
             ->leftJoin('users', function ($join) {
                 $join->on('tbl_regions.id', '=', 'users.region code');
             })->leftJoin('planted_trees', function ($join) {
@@ -376,22 +385,22 @@ class UserController extends Controller
      * function to calculate secretariat performance*/
 
     public function calculateSecretariatPerformance(){
-        $result = secretariat::selectRaw('`station name`,COUNT(`planter`) AS treecount')
+        $result = secretariat::selectRaw('`station name`,cast(COALESCE(sum(no_of_trees), 0) as unsigned) AS treecount')
             ->leftJoin('planted_trees', function ($join){
                 $join->on('secretariat staff.payrollnum', '=', 'planted_trees.planter');
-            })->groupBy('station name')->having('treecount', '>', 0)-> get();
+            })->whereBetween('planted_trees.created_at', [$this->startDate, $this->endDate])->groupBy('station name')->having('treecount', '>', 0)-> get();
 
         return $result;
     }
 
 
     /*
-     * function to calculate perticipation of teachers per county*/
+     * function to calculate participation of teachers per county*/
     public function calculateTeacherPerformancePerCounty(){
-        $result = Teacher::selectRaw('`County-Name` AS `station name`, COUNT(planter) as treecount')
+        $result = Teacher::selectRaw('`County-Name` AS `station name`, cast(COALESCE(sum(no_of_trees), 0) as unsigned) as treecount')
             ->leftJoin('planted_trees', function ($join){
                 $join->on('teachers.Tsc No', '=', 'planted_trees.planter');
-            })->groupBy('County-Name')->having('treecount', '>', 0)->get();
+            })->whereBetween('planted_trees.created_at', [$this->startDate, $this->endDate])->groupBy('County-Name')->having('treecount', '>', 0)->get();
         return $result;
     }
 
