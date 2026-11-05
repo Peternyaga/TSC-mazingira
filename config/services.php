@@ -31,4 +31,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'tsc' => [
+        'sms_api_key' => env('TSC_SMS_API_KEY'),
+        'payroll_api_key' => env('TSC_PAYROLL_API_KEY'),
+        'contact_api_key' => env('TSC_CONTACT_API_KEY'),
+    ],
+
 ];

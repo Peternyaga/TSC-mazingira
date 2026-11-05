@@ -216,6 +216,6 @@ return [
     /*
     *Key for authenticating API requests*/
 
-    'api_key'=>"REMOVED_ROTATE_CREDENTIAL"
+    'api_key'=> env('TSC_API_KEY')
 
 ];

@@ -180,10 +180,6 @@ class PlantingExerciseController extends Controller
 
     /*
      * function to upload an image to the server
-     * oyyi u-name: TSCmiti
-     * oyyi pass: REMOVED_ROTATE_CREDENTIAL
-     * oyyi email: peterngari@tsc.go.ke
-     * ori api token: REMOVED_ROTATE_CREDENTIAL
      * */
 
     public  function uploadImage(Request $request){

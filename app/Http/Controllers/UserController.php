@@ -126,7 +126,8 @@ class UserController extends Controller
                 return json_encode($response);
             }
             if ($user) {
-                $api_key = 'REMOVED_ROTATE_CREDENTIAL';
+                $api_key = config('services.tsc.sms_api_key');
+                abort_if(!is_string($api_key) || $api_key === '', 503, 'SMS integration is not configured.');
                 $mobile = $phone;
                 $message = 'Your OTP for TSC Miti account activation is: '.$otp;
 
@@ -198,7 +199,6 @@ class UserController extends Controller
     public function getTeacherInfo($tsc_no)
     {
         $id = (int)$tsc_no;
-       // $url = "https://tsconline.tsc.go.ke/api/teacher-register/teacher-register-details-to-edms?api_key=REMOVED_ROTATE_CREDENTIAL&Id_Number=$id";
         $context = stream_context_create([
             'ssl' => [
                 'verify_peer' => false,
@@ -208,10 +208,12 @@ class UserController extends Controller
        // $response = file_get_contents($url, true, $context);
        // $response = json_decode($response,true);
         //if (!$response[0]) {
-            $url = "https://tpay.tsc.go.ke/tp/v1/api/payroll/?api_key=REMOVED_ROTATE_CREDENTIAL&tsc_no=$tsc_no";
+            abort_if(!config('services.tsc.payroll_api_key'), 503, 'Teacher integration is not configured.');
+            $url = 'https://tpay.tsc.go.ke/tp/v1/api/payroll/?' . http_build_query(['api_key' => config('services.tsc.payroll_api_key'), 'tsc_no' => $tsc_no]);
             $response = json_decode(file_get_contents($url, true, $context), true);
             if($response){
-                $url = "https://tpay.tsc.go.ke/tp/v1/api/user-contact/?api_key=REMOVED_ROTATE_CREDENTIAL&tsc_no=".$tsc_no;
+                abort_if(!config('services.tsc.contact_api_key'), 503, 'Teacher integration is not configured.');
+            $url = 'https://tpay.tsc.go.ke/tp/v1/api/user-contact/?' . http_build_query(['api_key' => config('services.tsc.contact_api_key'), 'tsc_no' => $tsc_no]);
                 $contacts =json_decode(file_get_contents($url, true, $context), true);
                 $response[0]['mobile'] = $contacts["phone_number"];
                 $response[0]['email'] = $contacts["email"];
